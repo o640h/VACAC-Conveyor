@@ -4,7 +4,7 @@ A modular conveyor-building prototype created in Unity 6.6 for the VACAC Graduat
 
 ## Repository
 
-Repository URL will be added after the GitHub repository is created.
+[text](https://github.com/o640h/VACAC-Conveyor)
 
 ## Current features
 
