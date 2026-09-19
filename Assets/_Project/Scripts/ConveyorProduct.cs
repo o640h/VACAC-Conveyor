@@ -19,6 +19,12 @@ public class ConveyorProduct : MonoBehaviour
 
     private void Start()
     {
+        // A spawner may initialize the product before Start runs.
+        if (currentSegment != null)
+        {
+            return;
+        }
+
         if (!BeginMovingOn(startingSegment))
         {
             enabled = false;
@@ -98,10 +104,16 @@ public class ConveyorProduct : MonoBehaviour
             }
         }
 
+        if (startingSegment == null)
+        {
+            startingSegment = segment;
+        }
+
         currentSegment = segment;
         pathPoints = segmentPoints;
         targetPointIndex = 1;
         transform.position = GetPathPosition(0);
+        enabled = true;
 
         return true;
     }
@@ -114,11 +126,7 @@ public class ConveyorProduct : MonoBehaviour
             return;
         }
 
-        enabled = false;
-
-        Debug.Log(
-            $"Product reached the end of {currentSegment.name}.",
-            this);
+        Destroy(gameObject);
     }
 
     private bool TryFindNextSegment(
