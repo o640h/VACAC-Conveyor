@@ -8,8 +8,12 @@ public class ConveyorProduct : MonoBehaviour
     [Header("Movement")]
     [SerializeField, Min(0.01f)] private float speed = 0.5f;
     [SerializeField] private float surfaceOffset = 0.01f;
-    [SerializeField] private bool loopOnCurrentSegment = true;
 
+    [Header("Connections")]
+    [SerializeField, Min(0.01f)]
+    private float connectionSearchDistance = 0.1f;
+
+    private ConveyorSegment currentSegment;
     private Transform[] pathPoints;
     private int targetPointIndex;
 
@@ -54,15 +58,7 @@ public class ConveyorProduct : MonoBehaviour
             return;
         }
 
-        if (loopOnCurrentSegment)
-        {
-            transform.position = GetPathPosition(0);
-            targetPointIndex = 1;
-        }
-        else
-        {
-            enabled = false;
-        }
+        MoveToNextSegment();
     }
 
     public bool BeginMovingOn(ConveyorSegment segment)
@@ -70,7 +66,7 @@ public class ConveyorProduct : MonoBehaviour
         if (segment == null)
         {
             Debug.LogError(
-                "ConveyorProduct requires a starting segment.",
+                "ConveyorProduct requires a conveyor segment.",
                 this);
 
             return false;
@@ -82,7 +78,7 @@ public class ConveyorProduct : MonoBehaviour
             segmentPoints.Length < 2)
         {
             Debug.LogError(
-                "The starting conveyor requires at least two path points.",
+                "The conveyor requires at least two path points.",
                 segment);
 
             return false;
@@ -95,19 +91,73 @@ public class ConveyorProduct : MonoBehaviour
             if (segmentPoints[index] == null)
             {
                 Debug.LogError(
-                    "The starting conveyor has an empty path point.",
+                    "The conveyor has an empty path point.",
                     segment);
 
                 return false;
             }
         }
 
-        startingSegment = segment;
+        currentSegment = segment;
         pathPoints = segmentPoints;
         targetPointIndex = 1;
         transform.position = GetPathPosition(0);
 
         return true;
+    }
+
+    private void MoveToNextSegment()
+    {
+        if (TryFindNextSegment(out ConveyorSegment nextSegment))
+        {
+            BeginMovingOn(nextSegment);
+            return;
+        }
+
+        enabled = false;
+
+        Debug.Log(
+            $"Product reached the end of {currentSegment.name}.",
+            this);
+    }
+
+    private bool TryFindNextSegment(
+        out ConveyorSegment nextSegment)
+    {
+        nextSegment = null;
+
+        if (currentSegment.OutputSnap == null)
+        {
+            return false;
+        }
+
+        ConveyorSegment[] allSegments =
+            FindObjectsByType<ConveyorSegment>();
+
+        float closestDistance = connectionSearchDistance;
+
+        foreach (ConveyorSegment candidate in allSegments)
+        {
+            if (candidate == currentSegment ||
+                candidate.InputSnap == null)
+            {
+                continue;
+            }
+
+            float distance = Vector3.Distance(
+                currentSegment.OutputSnap.position,
+                candidate.InputSnap.position);
+
+            if (distance > closestDistance)
+            {
+                continue;
+            }
+
+            closestDistance = distance;
+            nextSegment = candidate;
+        }
+
+        return nextSegment != null;
     }
 
     private Vector3 GetPathPosition(int index)

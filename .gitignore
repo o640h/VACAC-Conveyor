@@ -5,7 +5,7 @@
 /[Bb]uilds/
 /[Ll]ogs/
 /[Uu]ser[Ss]ettings/
-/[Bb]ackup/
+/[Bb]ackup*/
 /[Mm]emoryCaptures/
 /[Rr]ecordings/
 
@@ -34,3 +34,5 @@
 
 sysinfo.txt
 crashlytics-build.properties
+
+UpgradeLog*.htm
