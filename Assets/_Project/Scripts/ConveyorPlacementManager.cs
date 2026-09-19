@@ -5,19 +5,32 @@ public class ConveyorPlacementManager : MonoBehaviour
 {
     [Header("Scene references")]
     [SerializeField] private Camera placementCamera;
+
     [SerializeField]
     private ConveyorSegment[] conveyorPrefabs =
         new ConveyorSegment[3];
 
     [Header("Placement settings")]
-    [SerializeField] private float snapDistance = 0.5f;
     [SerializeField] private float rotationStep = 90f;
+
+    [SerializeField, Range(0.5f, 10f)]
+    private float connectorRaySnapAngle = 4f;
+
+    [SerializeField, Min(0.001f)]
+    private float occupiedConnectorDistance = 0.05f;
 
     private readonly Plane groundPlane =
         new Plane(Vector3.up, Vector3.zero);
 
     private ConveyorSegment preview;
     private float previewYaw;
+
+    private enum SnapMode
+    {
+        None,
+        PreviewInputToTargetOutput,
+        PreviewOutputToTargetInput
+    }
 
     private void Awake()
     {
@@ -89,36 +102,43 @@ public class ConveyorPlacementManager : MonoBehaviour
         CancelPlacement();
 
         preview = Instantiate(conveyorPrefabs[prefabIndex]);
-        preview.name = conveyorPrefabs[prefabIndex].name + "_Preview";
+        preview.name =
+            conveyorPrefabs[prefabIndex].name + "_Preview";
+
         previewYaw = 0f;
     }
 
     private void UpdatePreview()
     {
-        Ray ray = placementCamera.ScreenPointToRay(
+        Ray mouseRay = placementCamera.ScreenPointToRay(
             Mouse.current.position.ReadValue());
 
-        if (!groundPlane.Raycast(ray, out float distance))
+        if (groundPlane.Raycast(
+            mouseRay,
+            out float groundDistance))
         {
-            return;
+            Vector3 groundPosition =
+                mouseRay.GetPoint(groundDistance);
+
+            preview.transform.SetPositionAndRotation(
+                groundPosition,
+                Quaternion.Euler(0f, previewYaw, 0f));
         }
 
-        Vector3 groundPosition = ray.GetPoint(distance);
-
-        preview.transform.SetPositionAndRotation(
-            groundPosition,
-            Quaternion.Euler(0f, previewYaw, 0f));
-
-        SnapPreviewToClosestOutput();
+        // Connector detection remains available when the cursor is aimed
+        // directly at an elevated endpoint instead of at the ground.
+        SnapPreviewToClosestConnector(mouseRay);
     }
 
-    private void SnapPreviewToClosestOutput()
+    private void SnapPreviewToClosestConnector(
+        Ray mouseRay)
     {
         ConveyorSegment[] segments =
             FindObjectsByType<ConveyorSegment>();
 
         ConveyorSegment closestSegment = null;
-        float closestDistance = snapDistance;
+        SnapMode closestMode = SnapMode.None;
+        float closestAngle = connectorRaySnapAngle;
 
         foreach (ConveyorSegment segment in segments)
         {
@@ -127,21 +147,30 @@ public class ConveyorPlacementManager : MonoBehaviour
                 continue;
             }
 
-            Vector3 previewPosition = preview.InputSnap.position;
-            Vector3 outputPosition = segment.OutputSnap.position;
-
-            // Compare horizontally so elevated outputs also work.
-            previewPosition.y = 0f;
-            outputPosition.y = 0f;
-
-            float distance = Vector3.Distance(
-                previewPosition,
-                outputPosition);
-
-            if (distance < closestDistance)
+            if (segment.OutputSnap != null &&
+                !IsOutputOccupied(segment, segments))
             {
-                closestDistance = distance;
-                closestSegment = segment;
+                ConsiderConnector(
+                    segment,
+                    segment.OutputSnap,
+                    SnapMode.PreviewInputToTargetOutput,
+                    mouseRay,
+                    ref closestSegment,
+                    ref closestMode,
+                    ref closestAngle);
+            }
+
+            if (segment.InputSnap != null &&
+                !IsInputOccupied(segment, segments))
+            {
+                ConsiderConnector(
+                    segment,
+                    segment.InputSnap,
+                    SnapMode.PreviewOutputToTargetInput,
+                    mouseRay,
+                    ref closestSegment,
+                    ref closestMode,
+                    ref closestAngle);
             }
         }
 
@@ -150,16 +179,118 @@ public class ConveyorPlacementManager : MonoBehaviour
             return;
         }
 
-        AlignPreviewDirection(closestSegment);
+        if (closestMode ==
+            SnapMode.PreviewInputToTargetOutput)
+        {
+            AlignPreviewInputToOutput(closestSegment);
 
-        Vector3 correction =
-            closestSegment.OutputSnap.position -
-            preview.InputSnap.position;
+            Vector3 correction =
+                closestSegment.OutputSnap.position -
+                preview.InputSnap.position;
 
-        preview.transform.position += correction;
+            preview.transform.position += correction;
+        }
+        else if (closestMode ==
+                 SnapMode.PreviewOutputToTargetInput)
+        {
+            AlignPreviewOutputToInput(closestSegment);
+
+            Vector3 correction =
+                closestSegment.InputSnap.position -
+                preview.OutputSnap.position;
+
+            preview.transform.position += correction;
+        }
     }
 
-    private void AlignPreviewDirection(ConveyorSegment target)
+    private void ConsiderConnector(
+        ConveyorSegment segment,
+        Transform connector,
+        SnapMode mode,
+        Ray mouseRay,
+        ref ConveyorSegment closestSegment,
+        ref SnapMode closestMode,
+        ref float closestAngle)
+    {
+        Vector3 directionToConnector =
+            connector.position - mouseRay.origin;
+
+        // Ignore connectors behind the camera.
+        if (Vector3.Dot(
+            mouseRay.direction,
+            directionToConnector) <= 0f)
+        {
+            return;
+        }
+
+        float angle = Vector3.Angle(
+            mouseRay.direction,
+            directionToConnector);
+
+        if (angle >= closestAngle)
+        {
+            return;
+        }
+
+        closestAngle = angle;
+        closestSegment = segment;
+        closestMode = mode;
+    }
+
+    private bool IsOutputOccupied(
+        ConveyorSegment target,
+        ConveyorSegment[] segments)
+    {
+        foreach (ConveyorSegment segment in segments)
+        {
+            if (segment == target ||
+                segment == preview ||
+                segment.InputSnap == null)
+            {
+                continue;
+            }
+
+            float distance = Vector3.Distance(
+                target.OutputSnap.position,
+                segment.InputSnap.position);
+
+            if (distance <= occupiedConnectorDistance)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsInputOccupied(
+        ConveyorSegment target,
+        ConveyorSegment[] segments)
+    {
+        foreach (ConveyorSegment segment in segments)
+        {
+            if (segment == target ||
+                segment == preview ||
+                segment.OutputSnap == null)
+            {
+                continue;
+            }
+
+            float distance = Vector3.Distance(
+                target.InputSnap.position,
+                segment.OutputSnap.position);
+
+            if (distance <= occupiedConnectorDistance)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void AlignPreviewInputToOutput(
+        ConveyorSegment target)
     {
         Transform[] previewPoints = preview.PathPoints;
         Transform[] targetPoints = target.PathPoints;
@@ -170,14 +301,48 @@ public class ConveyorPlacementManager : MonoBehaviour
             return;
         }
 
-        Vector3 previewDirection =
+        Vector3 previewEntryDirection =
             previewPoints[1].position -
             previewPoints[0].position;
 
-        Vector3 targetDirection =
+        Vector3 targetExitDirection =
             targetPoints[targetPoints.Length - 1].position -
             targetPoints[targetPoints.Length - 2].position;
 
+        AlignHorizontalDirections(
+            previewEntryDirection,
+            targetExitDirection);
+    }
+
+    private void AlignPreviewOutputToInput(
+        ConveyorSegment target)
+    {
+        Transform[] previewPoints = preview.PathPoints;
+        Transform[] targetPoints = target.PathPoints;
+
+        if (previewPoints.Length < 2 ||
+            targetPoints.Length < 2)
+        {
+            return;
+        }
+
+        Vector3 previewExitDirection =
+            previewPoints[previewPoints.Length - 1].position -
+            previewPoints[previewPoints.Length - 2].position;
+
+        Vector3 targetEntryDirection =
+            targetPoints[1].position -
+            targetPoints[0].position;
+
+        AlignHorizontalDirections(
+            previewExitDirection,
+            targetEntryDirection);
+    }
+
+    private void AlignHorizontalDirections(
+        Vector3 previewDirection,
+        Vector3 targetDirection)
+    {
         previewDirection.y = 0f;
         targetDirection.y = 0f;
 
@@ -187,11 +352,10 @@ public class ConveyorPlacementManager : MonoBehaviour
             return;
         }
 
-        float rotation =
-            Vector3.SignedAngle(
-                previewDirection,
-                targetDirection,
-                Vector3.up);
+        float rotation = Vector3.SignedAngle(
+            previewDirection,
+            targetDirection,
+            Vector3.up);
 
         preview.transform.Rotate(
             Vector3.up,
@@ -201,7 +365,9 @@ public class ConveyorPlacementManager : MonoBehaviour
 
     private void ConfirmPlacement()
     {
-        preview.name = preview.name.Replace("_Preview", "");
+        preview.name =
+            preview.name.Replace("_Preview", "");
+
         preview = null;
     }
 
