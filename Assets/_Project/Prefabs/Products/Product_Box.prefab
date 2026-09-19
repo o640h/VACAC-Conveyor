@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4010185615225810780}
+  - component: {fileID: 4299479748134606432}
   m_Layer: 0
   m_Name: Product_Box
   m_TagString: Untagged
@@ -32,6 +33,22 @@ Transform:
   - {fileID: 8267867996101390355}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4299479748134606432
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2536354286536941234}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f3f6aa070117cd949a52f1252c752c76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ConveyorProduct
+  startingSegment: {fileID: 0}
+  speed: 0.5
+  surfaceOffset: 0.01
+  loopOnCurrentSegment: 1
 --- !u!1001 &8446474018475530232
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -46,7 +63,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 60d862419245b8443935e07ed3d05386, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.547
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 60d862419245b8443935e07ed3d05386, type: 3}
       propertyPath: m_LocalPosition.z
