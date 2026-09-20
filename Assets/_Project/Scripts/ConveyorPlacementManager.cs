@@ -8,7 +8,7 @@ public class ConveyorPlacementManager : MonoBehaviour
 
     [SerializeField]
     private ConveyorSegment[] conveyorPrefabs =
-        new ConveyorSegment[3];
+        new ConveyorSegment[4];
 
     [Header("Placement settings")]
     [SerializeField] private float rotationStep = 90f;
@@ -64,6 +64,11 @@ public class ConveyorPlacementManager : MonoBehaviour
         if (Keyboard.current.digit3Key.wasPressedThisFrame)
         {
             BeginPlacement(2);
+        }
+
+        if (Keyboard.current.digit4Key.wasPressedThisFrame)
+        {
+            BeginPlacement(3);
         }
 
         if (preview == null)
