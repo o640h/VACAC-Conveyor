@@ -101,6 +101,7 @@ public class SimulationController : MonoBehaviour
 
         CompletedProducts = 0;
         RunningTime = 0f;
+        placementManager?.ClearPlacedConveyors();
         productSpawner?.RestartSpawningTimer();
     }
 
