@@ -19,6 +19,19 @@ public class ConveyorPlacementManager : MonoBehaviour
     [SerializeField, Min(0.001f)]
     private float occupiedConnectorDistance = 0.05f;
 
+    [Header("Placement feedback")]
+    [SerializeField]
+    private Color freePlacementColor =
+        new Color(1f, 0.65f, 0.1f, 1f);
+
+    [SerializeField]
+    private Color snappedPlacementColor =
+        new Color(0.15f, 1f, 0.25f, 1f);
+
+    [SerializeField]
+    private Color blockedPlacementColor =
+        new Color(1f, 0.1f, 0.1f, 1f);
+
     private readonly Plane groundPlane =
         new Plane(Vector3.up, Vector3.zero);
 
@@ -26,6 +39,9 @@ public class ConveyorPlacementManager : MonoBehaviour
     private float previewYaw;
     private ConveyorSegment snappedSegment;
     private SnapMode snappedMode;
+    private bool placementBlocked;
+    private Renderer[] previewRenderers;
+    private MaterialPropertyBlock previewPropertyBlock;
 
     private enum SnapMode
     {
@@ -112,6 +128,11 @@ public class ConveyorPlacementManager : MonoBehaviour
             conveyorPrefabs[prefabIndex].name + "_Preview";
 
         previewYaw = 0f;
+        placementBlocked = false;
+        previewRenderers =
+            preview.GetComponentsInChildren<Renderer>();
+        previewPropertyBlock = new MaterialPropertyBlock();
+        SetPreviewColor(freePlacementColor);
     }
 
     private void UpdatePreview()
@@ -141,12 +162,15 @@ public class ConveyorPlacementManager : MonoBehaviour
     {
         snappedSegment = null;
         snappedMode = SnapMode.None;
+        placementBlocked = false;
+        SetPreviewColor(freePlacementColor);
 
         ConveyorSegment[] segments =
             FindObjectsByType<ConveyorSegment>();
 
         ConveyorSegment closestSegment = null;
         SnapMode closestMode = SnapMode.None;
+        bool closestConnectorOccupied = false;
         float closestAngle = connectorRaySnapAngle;
 
         foreach (ConveyorSegment segment in segments)
@@ -156,29 +180,31 @@ public class ConveyorPlacementManager : MonoBehaviour
                 continue;
             }
 
-            if (segment.OutputSnap != null &&
-                !IsOutputOccupied(segment, segments))
+            if (segment.OutputSnap != null)
             {
                 ConsiderConnector(
                     segment,
                     segment.OutputSnap,
                     SnapMode.PreviewInputToTargetOutput,
+                    IsOutputOccupied(segment, segments),
                     mouseRay,
                     ref closestSegment,
                     ref closestMode,
+                    ref closestConnectorOccupied,
                     ref closestAngle);
             }
 
-            if (segment.InputSnap != null &&
-                !IsInputOccupied(segment, segments))
+            if (segment.InputSnap != null)
             {
                 ConsiderConnector(
                     segment,
                     segment.InputSnap,
                     SnapMode.PreviewOutputToTargetInput,
+                    IsInputOccupied(segment, segments),
                     mouseRay,
                     ref closestSegment,
                     ref closestMode,
+                    ref closestConnectorOccupied,
                     ref closestAngle);
             }
         }
@@ -188,8 +214,16 @@ public class ConveyorPlacementManager : MonoBehaviour
             return;
         }
 
+        if (closestConnectorOccupied)
+        {
+            placementBlocked = true;
+            SetPreviewColor(blockedPlacementColor);
+            return;
+        }
+
         snappedSegment = closestSegment;
         snappedMode = closestMode;
+        SetPreviewColor(snappedPlacementColor);
 
         if (closestMode ==
             SnapMode.PreviewInputToTargetOutput)
@@ -219,9 +253,11 @@ public class ConveyorPlacementManager : MonoBehaviour
         ConveyorSegment segment,
         Transform connector,
         SnapMode mode,
+        bool connectorOccupied,
         Ray mouseRay,
         ref ConveyorSegment closestSegment,
         ref SnapMode closestMode,
+        ref bool closestConnectorOccupied,
         ref float closestAngle)
     {
         Vector3 directionToConnector =
@@ -247,6 +283,7 @@ public class ConveyorPlacementManager : MonoBehaviour
         closestAngle = angle;
         closestSegment = segment;
         closestMode = mode;
+        closestConnectorOccupied = connectorOccupied;
     }
 
     private bool IsOutputOccupied(
@@ -377,6 +414,13 @@ public class ConveyorPlacementManager : MonoBehaviour
 
     private void ConfirmPlacement()
     {
+        if (placementBlocked)
+        {
+            return;
+        }
+
+        ClearPreviewColor();
+
         if (snappedSegment != null)
         {
             if (snappedMode ==
@@ -397,6 +441,8 @@ public class ConveyorPlacementManager : MonoBehaviour
         preview = null;
         snappedSegment = null;
         snappedMode = SnapMode.None;
+        placementBlocked = false;
+        previewRenderers = null;
     }
 
     private void CancelPlacement()
@@ -411,5 +457,39 @@ public class ConveyorPlacementManager : MonoBehaviour
         preview = null;
         snappedSegment = null;
         snappedMode = SnapMode.None;
+        placementBlocked = false;
+        previewRenderers = null;
+    }
+
+    private void SetPreviewColor(Color color)
+    {
+        if (previewRenderers == null ||
+            previewPropertyBlock == null)
+        {
+            return;
+        }
+
+        previewPropertyBlock.Clear();
+        previewPropertyBlock.SetColor("_BaseColor", color);
+        previewPropertyBlock.SetColor("_Color", color);
+
+        foreach (Renderer previewRenderer in previewRenderers)
+        {
+            previewRenderer.SetPropertyBlock(
+                previewPropertyBlock);
+        }
+    }
+
+    private void ClearPreviewColor()
+    {
+        if (previewRenderers == null)
+        {
+            return;
+        }
+
+        foreach (Renderer previewRenderer in previewRenderers)
+        {
+            previewRenderer.SetPropertyBlock(null);
+        }
     }
 }
