@@ -6,31 +6,32 @@ using UnityEngine.UI;
 [RequireComponent(typeof(SimulationController))]
 public class SimulationControlPanel : MonoBehaviour
 {
-    private readonly Color panelColor =
-        new Color(0.055f, 0.075f, 0.10f, 0.94f);
-
-    private readonly Color textColor =
-        new Color(0.92f, 0.95f, 0.98f, 1f);
-
-    private readonly Color mutedTextColor =
-        new Color(0.62f, 0.70f, 0.78f, 1f);
+    private static readonly Color PanelColor = new(0.055f, 0.065f, 0.08f, 0.94f);
+    private static readonly Color SurfaceColor = new(0.105f, 0.12f, 0.145f, 1f);
+    private static readonly Color TextColor = new(0.91f, 0.92f, 0.94f, 1f);
+    private static readonly Color MutedColor = new(0.53f, 0.57f, 0.63f, 1f);
+    private static readonly Color AccentColor = new(0.43f, 0.60f, 0.88f, 1f);
+    private static readonly Color RunningColor = new(0.40f, 0.76f, 0.57f, 1f);
 
     private SimulationController controller;
     private Font interfaceFont;
+    private Sprite roundedSprite;
+    private Sprite circularSprite;
+
     private Text modeText;
-    private Text speedText;
-    private Text spawnText;
-    private Text activeText;
-    private Text completedText;
-    private Text throughputText;
+    private Text speedValueText;
+    private Text spawnValueText;
+    private Text statisticsText;
+    private Image statusDot;
+    private Image buildButtonImage;
+    private Image runButtonImage;
 
     private void Awake()
     {
         controller = GetComponent<SimulationController>();
-        interfaceFont =
-            Resources.GetBuiltinResource<Font>(
-                "LegacyRuntime.ttf");
-
+        interfaceFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        roundedSprite = CreateRoundedSprite(32, 8, 9f);
+        circularSprite = CreateRoundedSprite(16, 8, 0f);
         EnsureEventSystem();
     }
 
@@ -41,247 +42,206 @@ public class SimulationControlPanel : MonoBehaviour
 
     private void Update()
     {
-        modeText.text = controller.IsRunning
-            ? "RUN MODE"
-            : "BUILD MODE";
+        bool isRunning = controller.IsRunning;
 
-        modeText.color = controller.IsRunning
-            ? new Color(0.25f, 1f, 0.45f)
-            : new Color(1f, 0.72f, 0.2f);
+        modeText.text = isRunning ? "Running" : "Build mode";
+        statusDot.color = isRunning ? RunningColor : AccentColor;
+        SetButtonState(buildButtonImage, !isRunning);
+        SetButtonState(runButtonImage, isRunning);
 
-        speedText.text =
-            $"Conveyor speed   {controller.SpeedMultiplier:0.00}x";
-
-        spawnText.text =
-            $"Spawn interval   {controller.SpawnInterval:0.00}s";
-
-        activeText.text =
-            $"Active products     {controller.ActiveProducts}";
-
-        completedText.text =
-            $"Completed products  {controller.CompletedProducts}";
-
-        throughputText.text =
-            $"Throughput           {controller.ThroughputPerMinute:0.0}/min";
-    }
-
-    private void EnsureEventSystem()
-    {
-        if (EventSystem.current != null)
-        {
-            return;
-        }
-
-        GameObject eventSystemObject =
-            new GameObject("RuntimeEventSystem");
-
-        eventSystemObject.AddComponent<EventSystem>();
-
-        InputSystemUIInputModule inputModule =
-            eventSystemObject.AddComponent<InputSystemUIInputModule>();
-
-        inputModule.AssignDefaultActions();
+        speedValueText.text = $"{controller.SpeedMultiplier:0.00}×";
+        spawnValueText.text = $"{controller.SpawnInterval:0.00}s";
+        statisticsText.text =
+            $"{controller.ActiveProducts} active   ·   " +
+            $"{controller.CompletedProducts} completed   ·   " +
+            $"{controller.ThroughputPerMinute:0.0}/min";
     }
 
     private void BuildInterface()
     {
-        GameObject canvasObject =
-            new GameObject("SimulationControlCanvas");
-
+        GameObject canvasObject = new("SimulationControlCanvas");
         Canvas canvas = canvasObject.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 100;
 
-        CanvasScaler scaler =
-            canvasObject.AddComponent<CanvasScaler>();
-
-        scaler.uiScaleMode =
-            CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        CanvasScaler scaler = canvasObject.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.screenMatchMode =
-            CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         scaler.matchWidthOrHeight = 0.5f;
-
         canvasObject.AddComponent<GraphicRaycaster>();
 
-        RectTransform panel = CreateRect(
-            "ControlPanel",
-            canvasObject.transform);
-
+        RectTransform panel = CreateRect("ControlPanel", canvasObject.transform);
         panel.anchorMin = new Vector2(0f, 1f);
         panel.anchorMax = new Vector2(0f, 1f);
         panel.pivot = new Vector2(0f, 1f);
-        panel.anchoredPosition = new Vector2(22f, -22f);
-        panel.sizeDelta = new Vector2(350f, 430f);
+        panel.anchoredPosition = new Vector2(24f, -24f);
+        panel.sizeDelta = new Vector2(326f, 284f);
 
         Image panelImage = panel.gameObject.AddComponent<Image>();
-        panelImage.color = panelColor;
+        StyleRoundedImage(panelImage, PanelColor);
 
-        VerticalLayoutGroup layout =
+        VerticalLayoutGroup panelLayout =
             panel.gameObject.AddComponent<VerticalLayoutGroup>();
+        panelLayout.padding = new RectOffset(18, 18, 15, 15);
+        panelLayout.spacing = 10f;
+        panelLayout.childAlignment = TextAnchor.UpperLeft;
+        panelLayout.childControlWidth = true;
+        panelLayout.childControlHeight = true;
+        panelLayout.childForceExpandWidth = true;
+        panelLayout.childForceExpandHeight = false;
 
-        layout.padding = new RectOffset(18, 18, 16, 16);
-        layout.spacing = 8f;
-        layout.childAlignment = TextAnchor.UpperLeft;
-        layout.childControlWidth = true;
-        layout.childControlHeight = false;
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = false;
+        BuildHeader(panel);
+        BuildModeControls(panel);
 
-        CreateText(
-            "VACAC CONVEYOR CONTROL",
-            panel,
-            22,
-            FontStyle.Bold,
-            textColor,
-            34f);
+        BuildSliderControl(
+            "Speed", "SpeedSlider", panel,
+            0.25f, 3f, 1f,
+            controller.SetSpeedMultiplier,
+            out speedValueText);
 
-        modeText = CreateText(
-            "BUILD MODE",
-            panel,
-            17,
-            FontStyle.Bold,
-            textColor,
-            28f);
-
-        RectTransform buttonRow = CreateRect(
-            "ModeButtons",
-            panel);
-        AddLayoutElement(buttonRow, 44f);
-
-        HorizontalLayoutGroup buttonLayout =
-            buttonRow.gameObject.AddComponent<HorizontalLayoutGroup>();
-
-        buttonLayout.spacing = 7f;
-        buttonLayout.childControlWidth = true;
-        buttonLayout.childControlHeight = true;
-        buttonLayout.childForceExpandWidth = true;
-        buttonLayout.childForceExpandHeight = true;
-
-        CreateButton(
-            "BUILD",
-            buttonRow,
-            new Color(0.75f, 0.43f, 0.08f),
-            controller.SetBuildMode);
-
-        CreateButton(
-            "RUN",
-            buttonRow,
-            new Color(0.08f, 0.55f, 0.25f),
-            controller.SetRunMode);
-
-        CreateButton(
-            "RESET",
-            buttonRow,
-            new Color(0.42f, 0.16f, 0.18f),
-            controller.ResetSimulation);
-
-        speedText = CreateText(
-            "Conveyor speed",
-            panel,
-            15,
-            FontStyle.Normal,
-            textColor,
-            24f);
-
-        Slider speedSlider = CreateSlider(
-            "SpeedSlider",
-            panel,
-            0.25f,
-            3f,
-            1f);
-
-        speedSlider.onValueChanged.AddListener(
-            controller.SetSpeedMultiplier);
-
-        spawnText = CreateText(
-            "Spawn interval",
-            panel,
-            15,
-            FontStyle.Normal,
-            textColor,
-            24f);
-
-        Slider spawnSlider = CreateSlider(
-            "SpawnSlider",
-            panel,
-            0.25f,
-            5f,
-            Mathf.Max(0.25f, controller.SpawnInterval));
-
-        spawnSlider.onValueChanged.AddListener(
-            controller.SetSpawnInterval);
+        BuildSliderControl(
+            "Spawn interval", "SpawnSlider", panel,
+            0.25f, 5f, Mathf.Max(0.25f, controller.SpawnInterval),
+            controller.SetSpawnInterval,
+            out spawnValueText);
 
         CreateDivider(panel);
 
-        activeText = CreateText(
-            "Active products     0",
+        statisticsText = CreateText(
+            "0 active   ·   0 completed   ·   0.0/min",
             panel,
-            15,
+            11,
             FontStyle.Normal,
-            textColor,
-            24f);
+            MutedColor,
+            23f,
+            TextAnchor.MiddleLeft);
 
-        completedText = CreateText(
-            "Completed products  0",
+        Text hint = CreateText(
+            "1–4 select  ·  R rotate  ·  Esc cancel",
             panel,
-            15,
+            10,
             FontStyle.Normal,
-            textColor,
-            24f);
-
-        throughputText = CreateText(
-            "Throughput           0.0/min",
-            panel,
-            15,
-            FontStyle.Normal,
-            textColor,
-            24f);
-
-        CreateText(
-            "1–4 Select  •  R Rotate  •  Esc Cancel\n" +
-            "RMB Look  •  WASD Move  •  Q/E Height",
-            panel,
-            13,
-            FontStyle.Normal,
-            mutedTextColor,
-            42f);
+            new Color(MutedColor.r, MutedColor.g, MutedColor.b, 0.72f),
+            18f,
+            TextAnchor.MiddleLeft);
+        hint.gameObject.SetActive(true);
     }
 
-    private Text CreateText(
-        string content,
-        Transform parent,
-        int fontSize,
-        FontStyle fontStyle,
-        Color color,
-        float height)
+    private void BuildHeader(Transform parent)
     {
-        RectTransform rect = CreateRect("Text", parent);
-        AddLayoutElement(rect, height);
+        RectTransform row = CreateRect("Header", parent);
+        SetPreferredHeight(row, 28f);
 
-        Text text = rect.gameObject.AddComponent<Text>();
-        text.text = content;
-        text.font = interfaceFont;
-        text.fontSize = fontSize;
-        text.fontStyle = fontStyle;
-        text.color = color;
-        text.alignment = TextAnchor.MiddleLeft;
-        text.horizontalOverflow = HorizontalWrapMode.Wrap;
-        text.verticalOverflow = VerticalWrapMode.Overflow;
+        Text title = CreateText(
+            "VACAC",
+            row,
+            17,
+            FontStyle.Bold,
+            TextColor,
+            28f,
+            TextAnchor.MiddleLeft);
+        StretchToParent(title.rectTransform);
 
-        return text;
+        RectTransform status = CreateRect("Status", row);
+        status.anchorMin = new Vector2(1f, 0f);
+        status.anchorMax = new Vector2(1f, 1f);
+        status.pivot = new Vector2(1f, 0.5f);
+        status.sizeDelta = new Vector2(104f, 0f);
+
+        HorizontalLayoutGroup statusLayout =
+            status.gameObject.AddComponent<HorizontalLayoutGroup>();
+        statusLayout.spacing = 7f;
+        statusLayout.childAlignment = TextAnchor.MiddleRight;
+        statusLayout.childControlWidth = false;
+        statusLayout.childControlHeight = false;
+        statusLayout.childForceExpandWidth = false;
+        statusLayout.childForceExpandHeight = false;
+
+        RectTransform dot = CreateRect("StatusDot", status);
+        SetPreferredSize(dot, 7f, 7f);
+        dot.sizeDelta = new Vector2(7f, 7f);
+        statusDot = dot.gameObject.AddComponent<Image>();
+        statusDot.sprite = circularSprite;
+        statusDot.color = AccentColor;
+
+        modeText = CreateText(
+            "Build mode",
+            status,
+            11,
+            FontStyle.Normal,
+            MutedColor,
+            20f,
+            TextAnchor.MiddleRight);
+        SetPreferredWidth(modeText.rectTransform, 86f);
     }
 
-    private void CreateButton(
+    private void BuildModeControls(Transform parent)
+    {
+        RectTransform row = CreateRect("ModeControls", parent);
+        SetPreferredHeight(row, 34f);
+
+        HorizontalLayoutGroup layout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = 6f;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = true;
+
+        buildButtonImage = CreateButton(
+            "Build", row, controller.SetBuildMode, false);
+        runButtonImage = CreateButton(
+            "Run", row, controller.SetRunMode, false);
+        CreateButton(
+            "Reset", row, controller.ResetSimulation, true);
+    }
+
+    private void BuildSliderControl(
+        string label,
+        string sliderName,
+        Transform parent,
+        float minimum,
+        float maximum,
+        float value,
+        UnityEngine.Events.UnityAction<float> action,
+        out Text valueText)
+    {
+        RectTransform root = CreateRect(label + "Control", parent);
+        SetPreferredHeight(root, 43f);
+
+        VerticalLayoutGroup layout = root.gameObject.AddComponent<VerticalLayoutGroup>();
+        layout.spacing = 3f;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+
+        RectTransform labelRow = CreateRect("LabelRow", root);
+        SetPreferredHeight(labelRow, 19f);
+
+        Text labelText = CreateText(
+            label, labelRow, 11, FontStyle.Normal,
+            MutedColor, 19f, TextAnchor.MiddleLeft);
+        StretchToParent(labelText.rectTransform);
+
+        valueText = CreateText(
+            string.Empty, labelRow, 11, FontStyle.Normal,
+            TextColor, 19f, TextAnchor.MiddleRight);
+        StretchToParent(valueText.rectTransform);
+
+        Slider slider = CreateSlider(sliderName, root, minimum, maximum, value);
+        slider.onValueChanged.AddListener(action);
+    }
+
+    private Image CreateButton(
         string label,
         Transform parent,
-        Color color,
-        UnityEngine.Events.UnityAction action)
+        UnityEngine.Events.UnityAction action,
+        bool isReset)
     {
         RectTransform rect = CreateRect(label + "Button", parent);
-
         Image image = rect.gameObject.AddComponent<Image>();
-        image.color = color;
+        StyleRoundedImage(image, SurfaceColor);
 
         Button button = rect.gameObject.AddComponent<Button>();
         button.targetGraphic = image;
@@ -289,20 +249,21 @@ public class SimulationControlPanel : MonoBehaviour
 
         ColorBlock colors = button.colors;
         colors.normalColor = Color.white;
-        colors.highlightedColor = new Color(1.15f, 1.15f, 1.15f);
-        colors.pressedColor = new Color(0.75f, 0.75f, 0.75f);
+        colors.highlightedColor = new Color(1.12f, 1.12f, 1.12f);
+        colors.pressedColor = new Color(0.80f, 0.80f, 0.80f);
+        colors.fadeDuration = 0.07f;
         button.colors = colors;
 
         RectTransform textRect = CreateRect("Label", rect);
         StretchToParent(textRect);
-
         Text text = textRect.gameObject.AddComponent<Text>();
         text.text = label;
         text.font = interfaceFont;
-        text.fontSize = 14;
-        text.fontStyle = FontStyle.Bold;
-        text.color = Color.white;
+        text.fontSize = 11;
+        text.fontStyle = FontStyle.Normal;
+        text.color = isReset ? MutedColor : TextColor;
         text.alignment = TextAnchor.MiddleCenter;
+        return image;
     }
 
     private Slider CreateSlider(
@@ -313,7 +274,7 @@ public class SimulationControlPanel : MonoBehaviour
         float value)
     {
         RectTransform root = CreateRect(name, parent);
-        AddLayoutElement(root, 26f);
+        SetPreferredHeight(root, 17f);
 
         Slider slider = root.gameObject.AddComponent<Slider>();
         slider.minValue = minimum;
@@ -321,75 +282,176 @@ public class SimulationControlPanel : MonoBehaviour
         slider.value = value;
 
         RectTransform background = CreateRect("Background", root);
-        background.anchorMin = new Vector2(0f, 0.38f);
-        background.anchorMax = new Vector2(1f, 0.62f);
-        background.offsetMin = Vector2.zero;
-        background.offsetMax = Vector2.zero;
-
-        Image backgroundImage =
-            background.gameObject.AddComponent<Image>();
-        backgroundImage.color = new Color(0.18f, 0.23f, 0.28f);
+        background.anchorMin = new Vector2(0f, 0.44f);
+        background.anchorMax = new Vector2(1f, 0.56f);
+        background.offsetMin = new Vector2(1f, 0f);
+        background.offsetMax = new Vector2(-1f, 0f);
+        Image backgroundImage = background.gameObject.AddComponent<Image>();
+        backgroundImage.color = new Color(0.19f, 0.21f, 0.25f, 1f);
 
         RectTransform fillArea = CreateRect("FillArea", root);
-        fillArea.anchorMin = new Vector2(0f, 0.38f);
-        fillArea.anchorMax = new Vector2(1f, 0.62f);
-        fillArea.offsetMin = new Vector2(8f, 0f);
-        fillArea.offsetMax = new Vector2(-8f, 0f);
+        fillArea.anchorMin = new Vector2(0f, 0.44f);
+        fillArea.anchorMax = new Vector2(1f, 0.56f);
+        fillArea.offsetMin = new Vector2(1f, 0f);
+        fillArea.offsetMax = new Vector2(-5f, 0f);
 
         RectTransform fill = CreateRect("Fill", fillArea);
         StretchToParent(fill);
         Image fillImage = fill.gameObject.AddComponent<Image>();
-        fillImage.color = new Color(0.12f, 0.66f, 0.88f);
+        fillImage.color = AccentColor;
 
         RectTransform handleArea = CreateRect("HandleArea", root);
         StretchToParent(handleArea);
-        handleArea.offsetMin = new Vector2(8f, 0f);
-        handleArea.offsetMax = new Vector2(-8f, 0f);
+        handleArea.offsetMin = new Vector2(5f, 0f);
+        handleArea.offsetMax = new Vector2(-5f, 0f);
 
         RectTransform handle = CreateRect("Handle", handleArea);
-        handle.sizeDelta = new Vector2(16f, 24f);
+        handle.anchorMin = new Vector2(0f, 0.5f);
+        handle.anchorMax = new Vector2(0f, 0.5f);
+        handle.pivot = new Vector2(0.5f, 0.5f);
+        handle.sizeDelta = new Vector2(8f, 8f);
         Image handleImage = handle.gameObject.AddComponent<Image>();
-        handleImage.color = Color.white;
+        handleImage.sprite = circularSprite;
+        handleImage.preserveAspect = true;
+        handleImage.color = TextColor;
 
         slider.fillRect = fill;
         slider.handleRect = handle;
         slider.targetGraphic = handleImage;
         slider.direction = Slider.Direction.LeftToRight;
-
         return slider;
+    }
+
+    private Text CreateText(
+        string content,
+        Transform parent,
+        int fontSize,
+        FontStyle fontStyle,
+        Color color,
+        float height,
+        TextAnchor alignment)
+    {
+        RectTransform rect = CreateRect("Text", parent);
+        SetPreferredHeight(rect, height);
+
+        Text text = rect.gameObject.AddComponent<Text>();
+        text.text = content;
+        text.font = interfaceFont;
+        text.fontSize = fontSize;
+        text.fontStyle = fontStyle;
+        text.color = color;
+        text.alignment = alignment;
+        text.horizontalOverflow = HorizontalWrapMode.Wrap;
+        text.verticalOverflow = VerticalWrapMode.Overflow;
+        return text;
     }
 
     private void CreateDivider(Transform parent)
     {
         RectTransform divider = CreateRect("Divider", parent);
-        AddLayoutElement(divider, 2f);
-
+        SetPreferredHeight(divider, 1f);
         Image image = divider.gameObject.AddComponent<Image>();
-        image.color = new Color(0.22f, 0.30f, 0.36f);
+        image.color = new Color(1f, 1f, 1f, 0.075f);
     }
 
-    private static RectTransform CreateRect(
-        string name,
-        Transform parent)
+    private void SetButtonState(Image image, bool selected)
     {
-        GameObject gameObject =
-            new GameObject(name, typeof(RectTransform));
+        image.color = selected ? AccentColor : SurfaceColor;
+    }
 
-        RectTransform rect =
-            gameObject.GetComponent<RectTransform>();
+    private void StyleRoundedImage(Image image, Color color)
+    {
+        image.sprite = roundedSprite;
+        image.type = Image.Type.Sliced;
+        image.color = color;
+    }
 
+    private void EnsureEventSystem()
+    {
+        if (EventSystem.current != null)
+        {
+            return;
+        }
+
+        GameObject eventSystemObject = new("RuntimeEventSystem");
+        eventSystemObject.AddComponent<EventSystem>();
+        InputSystemUIInputModule inputModule =
+            eventSystemObject.AddComponent<InputSystemUIInputModule>();
+        inputModule.AssignDefaultActions();
+    }
+
+    private static Sprite CreateRoundedSprite(int size, int radius, float border)
+    {
+        Texture2D texture = new(size, size, TextureFormat.RGBA32, false)
+        {
+            name = "RuntimeMinimalUI",
+            wrapMode = TextureWrapMode.Clamp,
+            filterMode = FilterMode.Bilinear
+        };
+
+        Color clear = new(1f, 1f, 1f, 0f);
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float cornerX = Mathf.Max(radius - x, x - (size - radius - 1));
+                float cornerY = Mathf.Max(radius - y, y - (size - radius - 1));
+                float positiveX = Mathf.Max(0f, cornerX);
+                float positiveY = Mathf.Max(0f, cornerY);
+                float distance = Mathf.Sqrt(
+                    positiveX * positiveX + positiveY * positiveY);
+                float alpha = Mathf.Clamp01(radius + 0.5f - distance);
+                texture.SetPixel(x, y, Color.Lerp(clear, Color.white, alpha));
+            }
+        }
+
+        texture.Apply();
+        return Sprite.Create(
+            texture,
+            new Rect(0f, 0f, size, size),
+            new Vector2(0.5f, 0.5f),
+            100f,
+            0,
+            SpriteMeshType.FullRect,
+            new Vector4(border, border, border, border));
+    }
+
+    private static RectTransform CreateRect(string name, Transform parent)
+    {
+        GameObject gameObject = new(name, typeof(RectTransform));
+        RectTransform rect = gameObject.GetComponent<RectTransform>();
         rect.SetParent(parent, false);
         return rect;
     }
 
-    private static void AddLayoutElement(
-        RectTransform rect,
-        float preferredHeight)
+    private static void SetPreferredHeight(RectTransform rect, float height)
     {
-        LayoutElement element =
-            rect.gameObject.AddComponent<LayoutElement>();
+        LayoutElement element = GetOrAddLayoutElement(rect);
+        element.preferredHeight = height;
+    }
 
-        element.preferredHeight = preferredHeight;
+    private static void SetPreferredWidth(RectTransform rect, float width)
+    {
+        LayoutElement element = GetOrAddLayoutElement(rect);
+        element.preferredWidth = width;
+    }
+
+    private static void SetPreferredSize(
+        RectTransform rect,
+        float width,
+        float height)
+    {
+        LayoutElement element = GetOrAddLayoutElement(rect);
+        element.preferredWidth = width;
+        element.preferredHeight = height;
+    }
+
+    private static LayoutElement GetOrAddLayoutElement(RectTransform rect)
+    {
+        LayoutElement element = rect.gameObject.GetComponent<LayoutElement>();
+        return element != null
+            ? element
+            : rect.gameObject.AddComponent<LayoutElement>();
     }
 
     private static void StretchToParent(RectTransform rect)
