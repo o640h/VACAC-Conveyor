@@ -1,55 +1,80 @@
 # VACAC Modular Conveyor System
 
-A modular conveyor-building prototype created in Unity 6.6 for the VACAC Graduate Software Engineer technical task.
+A small Unity prototype created for the VACAC Graduate Software Engineer
+technical assessment. It lets the user assemble a conveyor line at runtime,
+then run products across the connected layout.
 
-## Repository
+**Repository:** [github.com/o640h/VACAC-Conveyor](https://github.com/o640h/VACAC-Conveyor)
 
-[Repository Link](https://github.com/o640h/VACAC-Conveyor)
+## Features
 
-## Current features
-
-- Four modular conveyor types: long, short, incline, and decline
-- Runtime placement from either end of an existing conveyor
-- Automatic connector alignment across flat and elevated sections
+- Four placeable conveyor types: long, short, incline, and decline
+- Connector-based snapping from either end, including elevated connections
+- Placement feedback for free, valid, and occupied positions
 - Continuous product movement across the connected conveyor graph
 - Alternating box and can products
-- Build/run modes with speed, spawn-rate, and throughput controls
-- Free-fly inspection camera
-
-## Design decisions
-
-### Connector-proximity snapping
-
-Snapping is based on the distance between the preview conveyor's connector
-and compatible connectors in the scene, rather than requiring the cursor to
-hit a small screen-space snap point. This reduces precision demands, feels
-consistent from different camera angles, and lets the user focus on arranging
-the equipment itself. The comparison is performed horizontally so a conveyor
-placed on the ground plane can still snap cleanly to an elevated incline end.
-The preview remains centred beneath the cursor, while its initial rotation is
-derived from the prefab's input-to-output direction. This normalizes imported
-models whose local forward directions differ without adding prefab-specific
-rotation rules.
-Occupied connectors are rejected to prevent overlapping conveyor branches.
-When approaching an elevated connector, the preview temporarily uses a
-horizontal placement plane derived from that connector's height. This avoids
-the perspective offset caused by projecting an elevated conveyor onto the
-ground while keeping the model centred beneath the cursor.
+- Separate Build and Run modes
+- Adjustable conveyor speed and product spawn interval
+- Live active, completed, and throughput figures
+- Free-fly camera and runtime layout reset
 
 ## Controls
 
-- `1` — Select generic conveyor
-- `2` — Select short conveyor
-- `3` — Select incline conveyor
-- `4` — Select decline conveyor
-- `R` — Rotate preview
-- `Esc` — Cancel placement
-- Left mouse button — Place conveyor
-- Right mouse button + mouse — Look around
-- `WASD` — Move camera
-- `Q` / `E` — Move camera down/up
-- `Shift` — Move camera faster
+| Input | Action |
+|---|---|
+| `1` / `2` / `3` / `4` | Select long, short, incline, or decline conveyor |
+| Left mouse button | Place conveyor |
+| `R` | Rotate preview |
+| `Esc` | Cancel placement |
+| Right mouse button + mouse | Look around |
+| `WASD` | Move camera |
+| `Q` / `E` | Move down / up |
+| `Shift` | Move faster |
 
-## Unity version
+Use the on-screen **Build**, **Run**, and **Reset** controls to switch modes,
+start the simulation, or clear products and conveyors added during the session.
 
-Unity 6.6
+## Running the Project
+
+1. Open the project folder in Unity.
+2. Open `Assets/_Project/Scenes/Main.unity`.
+3. Enter Play mode.
+4. Build a layout, switch to Run, and adjust the simulation controls as needed.
+
+## Technical Approach
+
+- `ConveyorSegment` stores input/output connectors, movement points, and explicit
+  previous/next links.
+- `ConveyorPlacementManager` handles previews, rotation, connector occupancy,
+  snapping, and runtime cleanup.
+- `ConveyorProduct` follows each segment's path before transferring to the next
+  linked segment.
+- `ProductSpawner` finds the true start of the current conveyor chain and
+  alternates the supplied product types.
+- `SimulationController` coordinates Build/Run state, reset behaviour, speed,
+  spawning, and production figures.
+
+### Placement Design
+
+Snapping uses the distance between compatible conveyor connectors rather than
+requiring the cursor to hit a small screen-space target. This is quicker to use
+and remains predictable from different camera angles. Near an elevated
+connector, the preview uses a temporary placement plane at the required height,
+avoiding the perspective offset caused by projecting everything onto the
+ground. Occupied connectors are rejected to prevent overlapping branches.
+
+## Automated Tests
+
+Two Edit Mode tests cover the core conveyor graph behaviour:
+
+- Reconnecting a segment clears stale links and preserves a valid two-way link.
+- Any segment in a connected chain can find the first conveyor.
+
+## Tools used
+
+- Unity with Universal Render Pipeline
+- C# and the Unity Input System
+- Unity UI (uGUI)
+- Unity Test Framework / NUnit
+- Visual Studio and Visual Studio Code
+- Git and GitHub
