@@ -3,9 +3,9 @@ using UnityEngine;
 public class ProductSpawner : MonoBehaviour
 {
     [Header("Product")]
-    [SerializeField] private ConveyorProduct productPrefab;
-    [SerializeField] private ConveyorProduct alternateProductPrefab;
-    [SerializeField] private ConveyorSegment startingSegment;
+    [SerializeField] private ConveyorProduct productPrefab = null;
+    [SerializeField] private ConveyorProduct alternateProductPrefab = null;
+    [SerializeField] private ConveyorSegment startingSegment = null;
 
     [Header("Timing")]
     [SerializeField, Min(0.25f)]
@@ -14,12 +14,17 @@ public class ProductSpawner : MonoBehaviour
     [SerializeField]
     private bool spawnImmediately = true;
 
+    [SerializeField]
+    private bool spawningEnabled = true;
+
     [Header("Conveyor network")]
     [SerializeField, Min(0.01f)]
     private float connectionDistance = 0.1f;
 
     private float timeUntilNextSpawn;
     private bool spawnAlternateNext;
+
+    public float SpawnInterval => spawnInterval;
 
     private void Start()
     {
@@ -48,7 +53,7 @@ public class ProductSpawner : MonoBehaviour
         ConveyorSegment.RebuildConnectionsFromSnaps(
             connectionDistance);
 
-        if (spawnImmediately)
+        if (spawningEnabled && spawnImmediately)
         {
             SpawnProduct();
         }
@@ -58,6 +63,11 @@ public class ProductSpawner : MonoBehaviour
 
     private void Update()
     {
+        if (!spawningEnabled)
+        {
+            return;
+        }
+
         timeUntilNextSpawn -= Time.deltaTime;
 
         if (timeUntilNextSpawn > 0f)
@@ -67,6 +77,37 @@ public class ProductSpawner : MonoBehaviour
 
         SpawnProduct();
         timeUntilNextSpawn = spawnInterval;
+    }
+
+    public void SetSpawning(bool shouldSpawn)
+    {
+        if (spawningEnabled == shouldSpawn)
+        {
+            return;
+        }
+
+        spawningEnabled = shouldSpawn;
+
+        if (spawningEnabled)
+        {
+            timeUntilNextSpawn =
+                spawnImmediately ? 0f : spawnInterval;
+        }
+    }
+
+    public void SetSpawnInterval(float interval)
+    {
+        spawnInterval = Mathf.Max(0.25f, interval);
+        timeUntilNextSpawn = Mathf.Min(
+            timeUntilNextSpawn,
+            spawnInterval);
+    }
+
+    public void RestartSpawningTimer()
+    {
+        spawnAlternateNext = false;
+        timeUntilNextSpawn =
+            spawnImmediately ? 0f : spawnInterval;
     }
 
     private void SpawnProduct()

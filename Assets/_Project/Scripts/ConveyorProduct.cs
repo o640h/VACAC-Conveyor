@@ -1,7 +1,12 @@
+using System;
 using UnityEngine;
 
 public class ConveyorProduct : MonoBehaviour
 {
+    public static bool MovementEnabled { get; set; } = true;
+    public static float SpeedMultiplier { get; set; } = 1f;
+    public static event Action ProductCompleted;
+
     [Header("Starting path")]
     [SerializeField] private ConveyorSegment startingSegment;
 
@@ -29,6 +34,11 @@ public class ConveyorProduct : MonoBehaviour
 
     private void Update()
     {
+        if (!MovementEnabled)
+        {
+            return;
+        }
+
         Vector3 targetPosition =
             GetPathPosition(targetPointIndex);
 
@@ -45,7 +55,7 @@ public class ConveyorProduct : MonoBehaviour
         transform.position = Vector3.MoveTowards(
             transform.position,
             targetPosition,
-            speed * Time.deltaTime);
+            speed * SpeedMultiplier * Time.deltaTime);
 
         if ((transform.position - targetPosition).sqrMagnitude >
             0.000001f)
@@ -122,6 +132,7 @@ public class ConveyorProduct : MonoBehaviour
             return;
         }
 
+        ProductCompleted?.Invoke();
         Destroy(gameObject);
     }
 

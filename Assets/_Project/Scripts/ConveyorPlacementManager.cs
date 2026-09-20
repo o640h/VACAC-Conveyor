@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
 public class ConveyorPlacementManager : MonoBehaviour
@@ -103,7 +104,11 @@ public class ConveyorPlacementManager : MonoBehaviour
 
         if (Mouse.current.leftButton.wasPressedThisFrame)
         {
-            ConfirmPlacement();
+            if (EventSystem.current == null ||
+                !EventSystem.current.IsPointerOverGameObject())
+            {
+                ConfirmPlacement();
+            }
         }
 
         if (Keyboard.current.escapeKey.wasPressedThisFrame)
@@ -133,6 +138,16 @@ public class ConveyorPlacementManager : MonoBehaviour
             preview.GetComponentsInChildren<Renderer>();
         previewPropertyBlock = new MaterialPropertyBlock();
         SetPreviewColor(freePlacementColor);
+    }
+
+    public void SetPlacementEnabled(bool placementEnabled)
+    {
+        if (!placementEnabled)
+        {
+            CancelPlacement();
+        }
+
+        enabled = placementEnabled;
     }
 
     private void UpdatePreview()
