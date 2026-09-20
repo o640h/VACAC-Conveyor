@@ -4,6 +4,7 @@ public class ProductSpawner : MonoBehaviour
 {
     [Header("Product")]
     [SerializeField] private ConveyorProduct productPrefab;
+    [SerializeField] private ConveyorProduct alternateProductPrefab;
     [SerializeField] private ConveyorSegment startingSegment;
 
     [Header("Timing")]
@@ -18,6 +19,7 @@ public class ProductSpawner : MonoBehaviour
     private float connectionDistance = 0.1f;
 
     private float timeUntilNextSpawn;
+    private bool spawnAlternateNext;
 
     private void Start()
     {
@@ -72,8 +74,21 @@ public class ProductSpawner : MonoBehaviour
         ConveyorSegment firstSegment =
             startingSegment.FindFirstSegment();
 
+        ConveyorProduct prefabToSpawn = productPrefab;
+
+        if (alternateProductPrefab != null &&
+            spawnAlternateNext)
+        {
+            prefabToSpawn = alternateProductPrefab;
+        }
+
         ConveyorProduct product =
-            Instantiate(productPrefab);
+            Instantiate(prefabToSpawn);
+
+        if (alternateProductPrefab != null)
+        {
+            spawnAlternateNext = !spawnAlternateNext;
+        }
 
         if (!product.BeginMovingOn(firstSegment))
         {

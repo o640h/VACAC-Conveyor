@@ -644,6 +644,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProductSpawner
   productPrefab: {fileID: 4299479748134606432, guid: 800d50dbaf69f914bb7c55bc06c340fe, type: 3}
+  alternateProductPrefab: {fileID: 4299479748134606432, guid: 4a1a602eebe6455479112827006703de, type: 3}
   startingSegment: {fileID: 3151417044438853199}
   spawnInterval: 2
   spawnImmediately: 1
