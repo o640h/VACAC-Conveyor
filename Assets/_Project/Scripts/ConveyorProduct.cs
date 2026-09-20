@@ -9,10 +9,6 @@ public class ConveyorProduct : MonoBehaviour
     [SerializeField, Min(0.01f)] private float speed = 0.5f;
     [SerializeField] private float surfaceOffset = 0.01f;
 
-    [Header("Connections")]
-    [SerializeField, Min(0.01f)]
-    private float connectionSearchDistance = 0.1f;
-
     private ConveyorSegment currentSegment;
     private Transform[] pathPoints;
     private int targetPointIndex;
@@ -120,52 +116,13 @@ public class ConveyorProduct : MonoBehaviour
 
     private void MoveToNextSegment()
     {
-        if (TryFindNextSegment(out ConveyorSegment nextSegment))
+        if (currentSegment.NextSegment != null)
         {
-            BeginMovingOn(nextSegment);
+            BeginMovingOn(currentSegment.NextSegment);
             return;
         }
 
         Destroy(gameObject);
-    }
-
-    private bool TryFindNextSegment(
-        out ConveyorSegment nextSegment)
-    {
-        nextSegment = null;
-
-        if (currentSegment.OutputSnap == null)
-        {
-            return false;
-        }
-
-        ConveyorSegment[] allSegments =
-            FindObjectsByType<ConveyorSegment>();
-
-        float closestDistance = connectionSearchDistance;
-
-        foreach (ConveyorSegment candidate in allSegments)
-        {
-            if (candidate == currentSegment ||
-                candidate.InputSnap == null)
-            {
-                continue;
-            }
-
-            float distance = Vector3.Distance(
-                currentSegment.OutputSnap.position,
-                candidate.InputSnap.position);
-
-            if (distance > closestDistance)
-            {
-                continue;
-            }
-
-            closestDistance = distance;
-            nextSegment = candidate;
-        }
-
-        return nextSegment != null;
     }
 
     private Vector3 GetPathPosition(int index)

@@ -13,6 +13,10 @@ public class ProductSpawner : MonoBehaviour
     [SerializeField]
     private bool spawnImmediately = true;
 
+    [Header("Conveyor network")]
+    [SerializeField, Min(0.01f)]
+    private float connectionDistance = 0.1f;
+
     private float timeUntilNextSpawn;
 
     private void Start()
@@ -37,6 +41,11 @@ public class ProductSpawner : MonoBehaviour
             return;
         }
 
+        // Scene conveyors may already be touching before play begins.
+        // Build their runtime links once from their snap positions.
+        ConveyorSegment.RebuildConnectionsFromSnaps(
+            connectionDistance);
+
         if (spawnImmediately)
         {
             SpawnProduct();
@@ -60,10 +69,13 @@ public class ProductSpawner : MonoBehaviour
 
     private void SpawnProduct()
     {
+        ConveyorSegment firstSegment =
+            startingSegment.FindFirstSegment();
+
         ConveyorProduct product =
             Instantiate(productPrefab);
 
-        if (!product.BeginMovingOn(startingSegment))
+        if (!product.BeginMovingOn(firstSegment))
         {
             Destroy(product.gameObject);
         }

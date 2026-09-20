@@ -24,6 +24,8 @@ public class ConveyorPlacementManager : MonoBehaviour
 
     private ConveyorSegment preview;
     private float previewYaw;
+    private ConveyorSegment snappedSegment;
+    private SnapMode snappedMode;
 
     private enum SnapMode
     {
@@ -83,8 +85,7 @@ public class ConveyorPlacementManager : MonoBehaviour
             ConfirmPlacement();
         }
 
-        if (Mouse.current.rightButton.wasPressedThisFrame ||
-            Keyboard.current.escapeKey.wasPressedThisFrame)
+        if (Keyboard.current.escapeKey.wasPressedThisFrame)
         {
             CancelPlacement();
         }
@@ -133,6 +134,9 @@ public class ConveyorPlacementManager : MonoBehaviour
     private void SnapPreviewToClosestConnector(
         Ray mouseRay)
     {
+        snappedSegment = null;
+        snappedMode = SnapMode.None;
+
         ConveyorSegment[] segments =
             FindObjectsByType<ConveyorSegment>();
 
@@ -178,6 +182,9 @@ public class ConveyorPlacementManager : MonoBehaviour
         {
             return;
         }
+
+        snappedSegment = closestSegment;
+        snappedMode = closestMode;
 
         if (closestMode ==
             SnapMode.PreviewInputToTargetOutput)
@@ -365,10 +372,26 @@ public class ConveyorPlacementManager : MonoBehaviour
 
     private void ConfirmPlacement()
     {
+        if (snappedSegment != null)
+        {
+            if (snappedMode ==
+                SnapMode.PreviewInputToTargetOutput)
+            {
+                snappedSegment.ConnectNext(preview);
+            }
+            else if (snappedMode ==
+                     SnapMode.PreviewOutputToTargetInput)
+            {
+                preview.ConnectNext(snappedSegment);
+            }
+        }
+
         preview.name =
             preview.name.Replace("_Preview", "");
 
         preview = null;
+        snappedSegment = null;
+        snappedMode = SnapMode.None;
     }
 
     private void CancelPlacement()
@@ -381,5 +404,7 @@ public class ConveyorPlacementManager : MonoBehaviour
         preview.gameObject.SetActive(false);
         Destroy(preview.gameObject);
         preview = null;
+        snappedSegment = null;
+        snappedMode = SnapMode.None;
     }
 }

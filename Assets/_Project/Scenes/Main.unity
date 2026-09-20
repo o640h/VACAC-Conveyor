@@ -244,6 +244,7 @@ GameObject:
   - component: {fileID: 330585545}
   - component: {fileID: 330585544}
   - component: {fileID: 330585547}
+  - component: {fileID: 330585548}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -369,6 +370,22 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
+--- !u!114 &330585548
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330585543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a5e71276424eda41a6ffb789238a8d6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RuntimeCameraController
+  moveSpeed: 4
+  fastMultiplier: 3
+  lookSensitivity: 0.12
+  maximumPitch: 85
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -595,7 +612,7 @@ MonoBehaviour:
   - {fileID: 3462242060742076562, guid: 070957a0de321494dadc4cb7eb8f0548, type: 3}
   - {fileID: 2568383072262071816, guid: b8d230d4b968cc14da8e94a1c3f4bdc5, type: 3}
   rotationStep: 90
-  connectorScreenSnapDistance: 50
+  connectorRaySnapAngle: 4
   occupiedConnectorDistance: 0.05
 --- !u!1 &1210510127
 GameObject:
@@ -630,6 +647,7 @@ MonoBehaviour:
   startingSegment: {fileID: 3151417044438853199}
   spawnInterval: 2
   spawnImmediately: 1
+  connectionDistance: 0.1
 --- !u!4 &1210510129
 Transform:
   m_ObjectHideFlags: 0
